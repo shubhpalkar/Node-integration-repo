@@ -36,6 +36,8 @@ app.get("/", async(req, res) => {
 })
 
 app.post("/webhook", async (req, res) => {
+  console.time("process");
+
   if (!verifySignature(req)) {
     return res.status(401).send("Invalid signature");
   }
@@ -63,11 +65,17 @@ app.post("/webhook", async (req, res) => {
 
           console.log("fullDiff", fullDiff)
 
+          //Calling Agent Process
+          console.time("agent-call");
         const review = await reviewCode(fullDiff);
+        console.timeEnd("agent-call");
+
 
         console.log("review", review)
 
+        console.time("postPRComment")
         await postPRComment(owner, repo, prNumber, review);
+        console.timeEnd("postPRComment")
 
         return res.send({ status: "review posted" });
       } catch (err) {
@@ -76,7 +84,7 @@ app.post("/webhook", async (req, res) => {
       }
     }
   }
-
+console.timeEnd("process");
   res.send({ status: "ignored" });
 });
 
