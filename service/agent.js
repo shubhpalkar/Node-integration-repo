@@ -3,7 +3,7 @@ import { config } from "../config/config.js";
 
 export async function reviewCode(diffText) {
   try {
-    const response = await axios.post(
+   /* const response = await axios.post(
       config.agentApiUrl,
       { code: diffText },
       {
@@ -12,7 +12,15 @@ export async function reviewCode(diffText) {
           "Content-Type": "application/json"
         }
       }
-    );
+    );*/
+
+      const response = await axios.post(
+    "https://httpbin.org/post",
+    { code: diffText }
+  );
+
+  console.log("response", response)
+
 
     return response.data.review || "No feedback provided.";
   } catch (error) {
