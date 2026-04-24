@@ -7,5 +7,5 @@ export const config = {
   webhookSecret: process.env.WEBHOOK_SECRET,
   agentApiUrl: process.env.AGENT_API_URL,
   agentApiKey: process.env.AGENT_API_KEY,
-  port: process.env.PORT || 8000
+  port: process.env.PORT || 9000
 };
