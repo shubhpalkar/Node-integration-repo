@@ -1,9 +1,9 @@
 import express from "express";
 import crypto from "crypto";
 import bodyParser from "body-parser";
-import { config } from "./config.js";
-import { getPRFiles, postPRComment } from "./github.js";
-import { reviewCode } from "./agent.js";
+import { config } from "./config/config.js";
+import { getPRFiles, postPRComment } from "./service/github.js";
+import { reviewCode } from "./service/agent.js";
 
 const app = express();
 
