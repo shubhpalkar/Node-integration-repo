@@ -16,20 +16,6 @@ app.use(
   })
 );
 
-function verifySignature(req) {
-  const signature = req.headers["x-hub-signature-256"];
-  console.log("signature", signature)
-  if (!signature) return false;
-
-  const hmac = crypto.createHmac("sha256", config.webhookSecret);
-  const digest =
-    "sha256=" + hmac.update(req.rawBody).digest("hex");
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(digest)
-  );
-}
 
 app.get("/", async(req, res) => {
     return res.status(200).send("This is test data");
@@ -37,10 +23,6 @@ app.get("/", async(req, res) => {
 
 app.post("/webhook", async (req, res) => {
   console.time("process");
-
-  if (!verifySignature(req)) {
-    return res.status(401).send("Invalid signature");
-  }
 
   const event = req.headers["x-github-event"];
   const payload = req.body;
