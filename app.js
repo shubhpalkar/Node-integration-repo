@@ -1,25 +1,18 @@
 import express from "express";
-import crypto from "crypto";
-import bodyParser from "body-parser";
-import { config } from "./config/config.js";
-import { getPRFiles, postPRComment } from "./service/github.js";
-import { reviewCode } from "./service/agent.js";
+import axios from "axios";
+import { Octokit } from "@octokit/rest";
 
 const app = express();
+app.use(express.json({ limit: "5mb" }));
 
-// Need raw body for signature verification
-app.use(
-  bodyParser.json({
-    verify: (req, res, buf) => {
-      req.rawBody = buf;
-    }
-  })
-);
-
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN
+});
 
 app.get("/", async(req, res) => {
     return res.status(200).send("This is test data");
 })
+
 
 app.post("/webhook", async (req, res) => {
   console.time("process");
@@ -27,49 +20,67 @@ app.post("/webhook", async (req, res) => {
   const event = req.headers["x-github-event"];
   const payload = req.body;
 
-  if (event === "pull_request") {
-    const action = payload.action;
-
-    if (action === "opened" || action === "synchronize") {
-      const { full_name } = payload.repository;
-      const [owner, repo] = full_name.split("/");
-      const prNumber = payload.pull_request.number;
-
-      console.log("full_name--", full_name)
-
-      try {
-        const files = await getPRFiles(owner, repo, prNumber);
-
-        const fullDiff = files
-          .filter(f => f.patch)
-          .map(f => `${f.filename}:\n${f.patch}`)
-          .join("\n\n");
-
-          console.log("fullDiff", fullDiff)
-
-          //Calling Agent Process
-          console.time("agent-call");
-        const review = await reviewCode(fullDiff);
-        console.timeEnd("agent-call");
-
-
-        console.log("review", review)
-
-        console.time("postPRComment")
-        await postPRComment(owner, repo, prNumber, review);
-        console.timeEnd("postPRComment")
-
-        return res.send({ status: "review posted" });
-      } catch (err) {
-        console.error(err);
-        return res.status(500).send("Error processing PR");
-      }
+  try {
+    if (event !== "pull_request") {
+      return res.send({ status: "ignored" });
     }
-  }
-console.timeEnd("process");
-  res.send({ status: "ignored" });
-});
 
-app.listen(config.port, () => {
-  console.log(`Server running on port ${config.port}`);
+    const action = payload?.action;
+
+    if (!["opened", "synchronize"].includes(action)) {
+      return res.send({ status: "ignored action" });
+    }
+
+    const repoFullName = payload?.repository?.full_name;
+    const prNumber = payload?.pull_request?.number;
+
+    if (!repoFullName || !prNumber) {
+      return res.status(400).send("Invalid payload");
+    }
+
+    const [owner, repo] = repoFullName.split("/");
+
+    console.log(`Processing PR #${prNumber} (${action})`);
+
+    // 🔹 Get PR files safely
+    const files = await getPRFiles(owner, repo, prNumber);
+
+    if (!files.length) {
+      return res.send({ status: "no files" });
+    }
+
+    // 🔹 Build diff safely
+    const fullDiff = files
+      .filter(f => f.patch) // ignore binary / missing patches
+      .map(f => `${f.filename}:\n${f.patch}`)
+      .join("\n\n");
+
+    if (!fullDiff) {
+      return res.send({ status: "no diff available" });
+    }
+
+    // 🔹 LIMIT size (critical fix)
+    const MAX_DIFF_LENGTH = 40000;
+    const trimmedDiff = fullDiff.slice(0, MAX_DIFF_LENGTH);
+
+    console.log("Diff size:", trimmedDiff.length);
+
+    // 🔹 Call review API with timeout
+    const review = await reviewCode(trimmedDiff);
+
+    console.log("Review generated");
+
+    // 🔹 Post comment
+    await postPRComment(owner, repo, prNumber, review);
+
+    console.timeEnd("process");
+    return res.send({ status: "review posted" });
+
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    console.timeEnd("process");
+
+    // Always respond to GitHub
+    return res.status(200).send({ status: "error handled" });
+  }
 });
