@@ -1,6 +1,7 @@
 import express from "express";
 import axios from "axios";
 import { Octokit } from "@octokit/rest";
+import { config } from "./config/config.js";
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -83,4 +84,8 @@ app.post("/webhook", async (req, res) => {
     // Always respond to GitHub
     return res.status(200).send({ status: "error handled" });
   }
+});
+
+app.listen(config.port, () => {
+  console.log(`Server running on port ${config.port}`);
 });
