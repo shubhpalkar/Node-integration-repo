@@ -71,7 +71,7 @@ app.post("/webhook", async (req, res) => {
     console.log("Review generated");
 
     // 🔹 Post comment
-    await postPRComment(owner, repo, prNumber, review);
+    //await postPRComment(owner, repo, prNumber, review);
 
     console.timeEnd("process");
     return res.send({ status: "review posted" });
