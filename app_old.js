@@ -17,8 +17,8 @@ app.use(
 );
 
 
-app.get("/", async(req, res) => {
-    return res.status(200).send("This is test data");
+app.get("/", async (req, res) => {
+  return res.status(200).send("This is test data");
 })
 
 app.post("/webhook", async (req, res) => {
@@ -45,19 +45,24 @@ app.post("/webhook", async (req, res) => {
           .map(f => `${f.filename}:\n${f.patch}`)
           .join("\n\n");
 
-          console.log("fullDiff", fullDiff)
+        //console.log("fullDiff", fullDiff)
 
-          //Calling Agent Process
-          console.time("agent-call");
+        if (!fullDiff) {
+          return res.send({ status: "no diff to review" });
+        }
+
+
+        //Calling Agent Process
+        console.time("agent-call");
         const review = await reviewCode(fullDiff);
         console.timeEnd("agent-call");
 
 
         console.log("review", review)
 
-        console.time("postPRComment")
-        await postPRComment(owner, repo, prNumber, review);
-        console.timeEnd("postPRComment")
+        /* console.time("postPRComment")
+         await postPRComment(owner, repo, prNumber, review);
+         console.timeEnd("postPRComment")*/
 
         return res.send({ status: "review posted" });
       } catch (err) {
@@ -66,7 +71,7 @@ app.post("/webhook", async (req, res) => {
       }
     }
   }
-console.timeEnd("process");
+  console.timeEnd("process");
   res.send({ status: "ignored" });
 });
 
