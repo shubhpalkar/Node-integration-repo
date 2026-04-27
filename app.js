@@ -2,6 +2,8 @@ import express from "express";
 import axios from "axios";
 import { Octokit } from "@octokit/rest";
 import { config } from "./config/config.js";
+import { getPRFiles, postPRComment } from "./service/github.js";
+
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));

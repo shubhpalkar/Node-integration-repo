@@ -5,7 +5,7 @@ const octokit = new Octokit({
   auth: config.githubToken
 });
 
-async function getPRFiles(owner, repo, pull_number) {
+export async function getPRFiles(owner, repo, pull_number) {
   try {
     const files = await octokit.paginate(
       octokit.pulls.listFiles,
@@ -27,7 +27,7 @@ async function getPRFiles(owner, repo, pull_number) {
   }
 }
 
-async function postPRComment(owner, repo, issue_number, body) {
+export async function postPRComment(owner, repo, issue_number, body) {
   try {
     await octokit.issues.createComment({
       owner,
